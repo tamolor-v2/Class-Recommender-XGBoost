@@ -1,0 +1,4 @@
+﻿category,lower_limit,upper_limit
+short_duration,0,60
+medium_duration,60,120
+long_duration,120,
