@@ -6,6 +6,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from xgboost import XGBRegressor
 from sklearn.model_selection import train_test_split
+# import matplotlib.pyplot as plt
 
 logging.basicConfig(
     level=logging.INFO,

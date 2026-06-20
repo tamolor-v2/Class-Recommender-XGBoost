@@ -11,7 +11,7 @@ import os
 import pandas as pd
 import logging
 import sys
-import evaluation_wiring
+# import evaluation_wiring
 from evaluation_wiring import enrich_feature_df_with_dates, run_xgb_evaluation
 
 # Logging setup
