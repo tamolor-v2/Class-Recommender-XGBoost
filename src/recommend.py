@@ -50,9 +50,9 @@ class Recommendation:
                     + 0.05 * attr_boost
     """
 
-    # ─────────────────────────────────────────────────────────────────────────
+    ###########################################################################
     # Public API — registered users
-    # ─────────────────────────────────────────────────────────────────────────
+    ###########################################################################
     def recommend_hybrid(self,
                          user_id: str,
                          model_bundle: dict,
@@ -191,9 +191,9 @@ class Recommendation:
         ranked = sorted(hybrid_scores.items(), key=lambda x: x[1], reverse=True)[:n]
         return ranked
 
-    # ─────────────────────────────────────────────────────────────────────────
+    ###########################################################################
     # Public API — guest users
-    # ─────────────────────────────────────────────────────────────────────────
+    ###########################################################################
     def recommend_guest(self,
                         guest_user_id: str,
                         model_bundle: dict,
@@ -298,9 +298,9 @@ class Recommendation:
         ranked = sorted(hybrid_scores.items(), key=lambda x: x[1], reverse=True)[:n]
         return ranked, "hybrid"
 
-    # ─────────────────────────────────────────────────────────────────────────
+    ###########################################################################
     # Helpers
-    # ─────────────────────────────────────────────────────────────────────────
+    ###########################################################################
     def _get_user_features(self, uid: str, users_df, user_encoders, default_alpha):
         """
         Returns (feature_dict, dynamic_alpha, age_group, channel) for a user.
@@ -443,9 +443,9 @@ class Recommendation:
             return {k: 1.0 for k in scores}
         return {k: (v - mn) / rng for k, v in scores.items()}
 
-    # ─────────────────────────────────────────────────────────────────────────
+    ###########################################################################
     # Display helpers
-    # ─────────────────────────────────────────────────────────────────────────
+    ###########################################################################
     def show_recommendations_with_names(self, recommendations: list,
                                         classes_df: pd.DataFrame
                                         ) -> pd.DataFrame:

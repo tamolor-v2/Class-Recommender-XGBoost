@@ -18,7 +18,7 @@ SOCIAL_CHANNELS = {"friends", "instagram", "youtube", "tiktok"}
 
 class Preprocessing:
 
-    # ── Registered users ──
+    #### Registered users ##################################################################
     def preprocessing_users_data(self, df, channel_map, recency_map, time_of_day_map):
         logger.info("Preprocessing registered users...")
         today = pd.Timestamp(date.today())
@@ -156,7 +156,7 @@ class Preprocessing:
         )
         return df
 
-    # ── Guest users ───────────────────────────────────────────────────────────
+    #### Guest users #######################################################################
     def preprocessing_guest_data(self, guest_df, time_of_day_map, recency_map):
         """
         Guest users always get cf_trust=0.0 and is_cold_start=1.
@@ -169,7 +169,7 @@ class Preprocessing:
 
         df["guestuserid"] = df["guestuserid"].astype(str)
 
-        # ── Derived date components ─────────
+        #### Derived date components ##############################################################
         df["guestjointime"] = pd.to_datetime(df["guestjointime"], errors="coerce")
         df["userjoindate"]     = df["guestjointime"].dt.date
         df["join_hour"]        = df["guestjointime"].dt.hour
@@ -177,7 +177,7 @@ class Preprocessing:
         df["join_is_weekend"]  = (df["join_day_of_week"] >= 5).astype(int)
         df["join_month"]       = df["guestjointime"].dt.month
 
-        # ── Time-of-day bucket (mirrors registered-user logic) ─────
+        #### Time-of-day bucket (mirrors registered-user logic) ###################################
         upper   = time_of_day_map["upper_limit"].astype(float).tolist()
         labels = time_of_day_map["label"].tolist()
         bins = [-1] + upper
@@ -188,14 +188,14 @@ class Preprocessing:
             labels=labels
         ).astype(str).replace("nan", "unknown")
 
-        # ── Season (mirrors registered-user logic) ─────
+        #### Season (mirrors registered-user logic) ################################################
         df["join_season"] = pd.cut(
             df["join_month"],
             bins=[0, 3, 6, 9, 12],
             labels=["winter", "spring", "summer", "fall"]
         ).astype(str).replace("nan", "unknown")
 
-        # ── Account age / recency bucket ────
+        #### Account age / recency bucket #######################################################
         # ── Time-of-day bucket (mirrors registered-user logic) ─────
         upper   = recency_map["upper_limit"].astype(float).tolist()
         labels = recency_map["label"].tolist()
@@ -210,7 +210,7 @@ class Preprocessing:
             labels=labels
         ).astype(str).replace("nan", "unknown")
 
-        # ── Preserve original guest-specific temporal columns for audit ───────
+        #### Preserve original guest-specific temporal columns for audit #########################
         df["guest_join_hour"]        = df["join_hour"]
         df["guest_join_time_of_day"] = df["join_time_of_day"]
         df["guest_join_day_of_week"] = df["join_day_of_week"]
@@ -242,7 +242,7 @@ class Preprocessing:
         )
         return df
 
-    # ── Classes ──
+    #### Classes #########################################################################
     def preprocessing_classes_data(self, df, duration_map, cost_tier_map):
         logger.info("Preprocessing classes data...")
         df = df.copy()
@@ -319,13 +319,6 @@ class Preprocessing:
             bins=bins,
             labels=labels
         ).astype(str).replace("nan", "unknown")
-
-        # def cost_tier_token(c):
-        #     if c <= 5:  return "cost_budget"
-        #     if c <= 12: return "cost_standard"
-        #     return "cost_premium"
-
-        # df["cost_tier_token"] = df["classcost_numeric"].apply(cost_tier_token)
 
         max_cost = df["classcost_numeric"].max()
         df["cost_weight"] = (

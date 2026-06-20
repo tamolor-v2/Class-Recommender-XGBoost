@@ -24,7 +24,7 @@ ingest_process = ingest.Ingestion()
  transfer_class_df, order_weight_df, transfer_weight_df, enroll_weight_df, duration_df, channel_df,
  recency_df, time_of_day_df, cost_tier_df) = ingest_process.ingest_data()
 
-# ─────────────────────────────────────────────────────────────────────────────
+########################################################################################
 class RecommendationPipeline:
 
     def run_pipeline(self):
@@ -33,7 +33,7 @@ class RecommendationPipeline:
         fe  = feature_engineering.FeatureEngineering()
         mlm = ml_model.MLModeling()
 
-        # ── 1. Preprocess ──────────────────────────────────────────────────
+        ###### 1. Preprocess ###########################################################
         logger.info("Step 1 — Preprocessing...")
         pre_users    = pp.preprocessing_users_data(users_df, channel_df, recency_df, time_of_day_df)
         pre_guests   = pp.preprocessing_guest_data(guest_users_df, time_of_day_df, recency_df)
@@ -47,7 +47,7 @@ class RecommendationPipeline:
             order_weight_df, transfer_weight_df, enroll_weight_df
         )
 
-        # ── 2. Analytics outputs ───────────────────────────────────────────
+        ###### 2. Analytics outputs ####################################################
         logger.info("Step 2 — Writing analytics outputs...")
         os.makedirs("data/output", exist_ok=True)
 
@@ -72,7 +72,7 @@ class RecommendationPipeline:
         })
         funnel.to_csv("data/output/funnel.csv", index=False)
 
-        # ── 3. Interaction feature table ───────────────────────────────────
+        #### 3. Interaction feature table ###################################################
         logger.info("Step 3 — Building interaction signals...")
         feature_df = fe.feature_interactions(
             cart=pre_cart, enroll=pre_enroll,
@@ -88,7 +88,7 @@ class RecommendationPipeline:
         )
         popular.to_csv("data/output/popular_classes.csv", index=False)
 
-        # ── 4. Label-encode categoricals for XGBoost ──────────────────────
+        #### 4. Label-encode categoricals for XGBoost ######################################
         logger.info("Step 4 — Label-encoding categoricals...")
         enc_users, enc_classes, user_encoders, class_encoders = (
             fe.encode_categoricals(pre_users, pre_classes)
@@ -104,7 +104,7 @@ class RecommendationPipeline:
                 lambda v: int(le.transform([v])[0]) if v in le.classes_ else 0
             )
 
-        # ── 5. Build XGBoost training matrix ──────────────────────────────
+        #### 5. Build XGBoost training matrix ###################################################
         logger.info("Step 5 — Building XGBoost training matrix...")
         # We need TF-IDF to compute content_sim; build a temporary vectoriser
         # on the raw class content strings.
@@ -135,7 +135,7 @@ class RecommendationPipeline:
             xgb_training_df = xgb_train_df,
         )
 
-        # ── 6a. Evaluate — train AND test metrics for overfitting detection ─
+        #### 6a. Evaluate — train AND test metrics for overfitting detection ##################
         #
         # The evaluator runs two passes:
         #   TRAIN pass: empty_df passed → seen_set={} → full catalogue open
@@ -169,7 +169,7 @@ class RecommendationPipeline:
             "═" * 80,
         )
 
-        # ── 7. Persist model bundle ────────────────────────────────────────
+        #### 7. Persist model bundle ###########################################################
         logger.info("Step 7 — Saving model...")
         os.makedirs("models", exist_ok=True)
         with open("models/model.pkl", "wb") as f:
@@ -189,7 +189,7 @@ class RecommendationPipeline:
             )
         logger.info("Model saved → models/model.pkl")
 
-        # ── 8. Batch recommendations ────
+        #### 8. Batch recommendations ###########################################################
         logger.info("Step 8 — Generating batch recommendations...")
         enriched_classes_df = model_bundle["classes_df"]
         all_recs = []
@@ -292,12 +292,12 @@ class RecommendationPipeline:
         return df_all
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+##################################################################################
 # FastAPI app
-# ─────────────────────────────────────────────────────────────────────────────
+##################################################################################
 app = FastAPI(title="Class Recommendation API — XGBoost Hybrid")
 
-# ── Load persisted model bundle at startup ────────────────────────────────────
+#### Load persisted model bundle at startup ######################################
 _model_bundle  = None
 _feature_df    = None
 _enc_users     = None
@@ -326,7 +326,7 @@ def root():
     return RedirectResponse(url="/docs")
 
 
-# ── Registered-user endpoint ──────────────────────────────────────────────────
+#### Registered-user endpoint #############################################################
 @app.get("/recommend/{user_id}")
 def get_recommendations(user_id: int):
     if _model_bundle is None:
@@ -401,7 +401,7 @@ def get_recommendations(user_id: int):
     }
 
 
-# ── Guest endpoint ─────────
+#### Guest endpoint #########################################################################
 @app.get("/recommend/guest/{guest_user_id}")
 def get_guest_recommendations(guest_user_id: str):
     if _model_bundle is None:
@@ -443,9 +443,9 @@ def get_guest_recommendations(guest_user_id: str):
     }
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+####################################################################################
 # Entry point
-# ─────────────────────────────────────────────────────────────────────────────
+####################################################################################
 if __name__ == "__main__":
     pipeline = RecommendationPipeline()
     pipeline.run_pipeline()

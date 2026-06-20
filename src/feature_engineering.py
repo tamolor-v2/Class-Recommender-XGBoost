@@ -8,9 +8,9 @@ from sklearn.preprocessing import LabelEncoder
 from scipy.sparse import csr_matrix
 import random
 
-# ─────────────────────────────────────────────────────────────────────────────
+###############################################################################
 # Logging
-# ─────────────────────────────────────────────────────────────────────────────
+###############################################################################
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(message)s",
@@ -18,9 +18,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger("feature_engineering")
 
-# ─────────────────────────────────────────────────────────────────────────────
+###############################################################################
 # Numeric user features forwarded to the XGBoost feature matrix
-# ─────────────────────────────────────────────────────────────────────────────
+###############################################################################
 USER_NUMERIC_COLS = [
     "age", "account_age_days", "has_referral_code", "is_social_referral",
     "join_day_of_week", "join_hour", "join_month", "age_missing",
@@ -45,14 +45,14 @@ USER_CAT_COLS = ["usergender", "channel_type"]
 CLASS_CAT_COLS = ["teacher_token", "location_token", "location_clean"]
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+###############################################################################
 # Feature Engineering Class
-# ─────────────────────────────────────────────────────────────────────────────
+###############################################################################
 class FeatureEngineering:
 
-    # ─────────────────────────────────────────────────────────────────────────
+    ###########################################################################
     # 1.  Interaction-signal aggregation  (unchanged from original)
-    # ─────────────────────────────────────────────────────────────────────────
+    ###########################################################################
     def feature_interactions(
             self,
             cart,
@@ -70,9 +70,9 @@ class FeatureEngineering:
         logger.info("Extracting interaction features...")
         today = pd.Timestamp.now()
 
-        # ─────────────────────────────────────────────
+        ###############################################
         # SAFETY: CF TRUST
-        # ─────────────────────────────────────────────
+        ###############################################
         cf_trust_map = {}
         if users_df is not None and "cf_trust" in users_df.columns:
             cf_trust_map = dict(
@@ -80,9 +80,9 @@ class FeatureEngineering:
                     users_df["cf_trust"].astype(float))
             )
 
-        # ─────────────────────────────────────────────
+        ###############################################
         # CLASS LOOKUPS
-        # ─────────────────────────────────────────────
+        ###############################################
         cost_weight_map = {}
         available_set = None
 
@@ -115,9 +115,9 @@ class FeatureEngineering:
         def recency_weight(dt):
             return 1 / (1 + safe_days(dt))
 
-        # ─────────────────────────────────────────────
+        ################################################
         # CART SIGNAL
-        # ─────────────────────────────────────────────
+        ################################################
         cart_df = cart[["shoppingcartitemstudentid", "shoppingcartitemclassid"]].copy()
         cart_df.columns = ["user_id", "class_id"]
         cart_df["user_id"] = cart_df["user_id"].astype(str)
@@ -126,9 +126,9 @@ class FeatureEngineering:
 
         cart_df["score"] = cart_df["class_id"].apply(lambda c: 0.35 * cost_w(c))
 
-        # ─────────────────────────────────────────────
+        ################################################
         # ENROLLMENT SIGNAL
-        # ─────────────────────────────────────────────
+        ################################################
         enroll_df = enroll[
             ["enrollmentstudentid", "enrollmentclassid",
              "enrollmentstatus", "enrollmentcheckindate"]
@@ -151,9 +151,9 @@ class FeatureEngineering:
 
         enroll_df = enroll_df[["user_id", "class_id", "score"]]
 
-        # ─────────────────────────────────────────────
+        ################################################
         # REPEAT ENROLLMENT SIGNAL
-        # ─────────────────────────────────────────────
+        ################################################
         repeat_enroll_df = pd.DataFrame()
 
         try:
@@ -203,9 +203,9 @@ class FeatureEngineering:
         except Exception as e:
             logger.warning("Repeat enrollment skipped safely: %s", e)
 
-        # ─────────────────────────────────────────────
+        ###############################################
         # TRANSFERS (FULL)
-        # ─────────────────────────────────────────────
+        ###############################################
         transfer_df = pd.DataFrame()
 
         if transfer_class is not None:
@@ -238,9 +238,9 @@ class FeatureEngineering:
 
                 transfer_df = t[["user_id", "class_id", "score"]]
 
-        # ─────────────────────────────────────────────
+        ###############################################
         # SALES
-        # ─────────────────────────────────────────────
+        ###############################################
         sales_df = pd.DataFrame()
 
         if sales_order is not None:
@@ -275,9 +275,9 @@ class FeatureEngineering:
 
             sales_df = s[["user_id", "class_id", "score"]]
 
-        # ─────────────────────────────────────────────
+        ################################################
         # GUEST INTERACTIONS
-        # ─────────────────────────────────────────────
+        ################################################
         guest_interactions_df = pd.DataFrame()
 
         if guest_data is not None:
@@ -306,9 +306,9 @@ class FeatureEngineering:
             guest_interactions_df = guest_cart[["user_id", "class_id", "score"]]
 
 
-        # ─────────────────────────────────────────────
+        ###############################################
         # COMBINE ALL SIGNALS
-        # ─────────────────────────────────────────────
+        ###############################################
         df = pd.concat(
             [cart_df, enroll_df, repeat_enroll_df, transfer_df, sales_df, guest_interactions_df],
             ignore_index=True
@@ -319,9 +319,9 @@ class FeatureEngineering:
         df["user_id"] = df["user_id"].astype(str)
         df["class_id"] = df["class_id"].astype(str)
 
-        # ─────────────────────────────────────────────
+        ################################################
         # POPULARITY FEATURES
-        # ─────────────────────────────────────────────
+        ################################################
         class_pop = df.groupby("class_id")["score"].sum().reset_index()
         class_pop.columns = ["class_id", "class_popularity"]
 
@@ -340,17 +340,17 @@ class FeatureEngineering:
         max_scores = df.groupby("user_id")["score"].transform("max")
         df["score"] = (df["score"] / (max_scores + 1e-6)).clip(0, 1)
 
-        # ─────────────────────────────────────────────
+        ###############################################
         # USER INTERACTION FEATURES
-        # ─────────────────────────────────────────────
+        ###############################################
         df["user_interaction_count"] = df.groupby("user_id")["class_id"].transform("count")
         df["user_activity_weight"] = np.log1p(df["user_interaction_count"])
 
         df["score"] *= (1 + df["user_activity_weight"] * 0.02)  # Previous value: 0.05
 
-        # ─────────────────────────────────────────────
+        ###############################################
         # SAFE FEATURE GUARANTEES
-        # ─────────────────────────────────────────────
+        ###############################################
         for col in [
             "class_repeat_rate",
             "teacher_affinity_score",
@@ -366,7 +366,7 @@ class FeatureEngineering:
 
         return df
 
-    # ── label-encode categoricals in preparation for XGBoost model ───────
+    #### label-encode categoricals in preparation for XGBoost model ##############
     def encode_categoricals(self, users_df, classes_df):
         """
         Fits LabelEncoders on user and class categorical columns and returns:
@@ -424,10 +424,10 @@ class FeatureEngineering:
                 row[col] = 0
         return row
 
-    # ─────────────────────────────────────────────────────────────────────────
+    ###########################################################################
     # 2.  XGBoost training-row builder
     #     Joins interaction scores with user + class feature vectors.
-    # ─────────────────────────────────────────────────────────────────────────
+    ###########################################################################
     def build_xgb_training_data(self, interactions_df, users_df, classes_df,
                                 tfidf_matrix, class_index):
 
@@ -640,8 +640,7 @@ class FeatureEngineering:
 
                 target_idx = cid_to_tfidf_idx.get(cid)
                 content_sim = 0.0
-                sim_indices = []   # reset every iteration — prevents stale
-                                   # values from a previous loop carrying over
+                sim_indices = []
 
                 # Guard: only proceed when this class exists in the TF-IDF
                 # index. cid_to_tfidf_idx.get() returns None for classes
@@ -656,10 +655,6 @@ class FeatureEngineering:
                         if c in cid_to_tfidf_idx
                     ]
 
-                # Both guards required:
-                #   target_idx  — class must be in the TF-IDF index
-                #   sim_indices — user must have at least one other class
-                #                 in the TF-IDF index to compare against
                 if target_idx is not None and sim_indices:
                     target_vec = tfidf_matrix[int(target_idx), :]
                     peer_vecs  = tfidf_matrix[sim_indices, :]
@@ -684,9 +679,9 @@ class FeatureEngineering:
 
         return xgb_df
 
-    # ─────────────────────────────────────────────────────────────────────────
+    ###########################################################################
     # 3. Build a feature row for ONE (user, class) pair at inference time
-    # ─────────────────────────────────────────────────────────────────────────
+    ###########################################################################
     def build_inference_row(self, user_features: dict, class_features: dict,
                             content_sim: float) -> pd.DataFrame:
         """

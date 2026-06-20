@@ -14,9 +14,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger("ml_model")
 
-# ─────────────────────────────────────────────────────────────────────────────
+###############################################################################
 # Feature column lists — must stay in sync with feature_engineering.py
-# ─────────────────────────────────────────────────────────────────────────────
+###############################################################################
 USER_NUMERIC_COLS = [
     "age", "account_age_days", "has_referral_code", "is_social_referral",
     "join_day_of_week", "join_hour", "join_month", "age_missing",
@@ -90,7 +90,7 @@ class MLModeling:
         """
         logger.info("=== Training XGBoost Hybrid Recommendation Model ===")
 
-        # ── 1.  Content-based: TF-IDF on available classes ────
+        #### 1.  Content-based: TF-IDF on available classes ############################
         logger.info("Building TF-IDF content model...")
         avail_classes = classes_df.copy()
 
@@ -128,7 +128,7 @@ class MLModeling:
             tfidf_matrix.shape[0], tfidf_matrix.shape[1]
         )
 
-        # ── 2.  Popularity lookup (normalised, used as fallback weight) ─────
+        #### 2.  Popularity lookup (normalised, used as fallback weight) #####################
         pop = (
             interactions.groupby("class_id")["score"].sum()
             .rename("popularity").reset_index()
@@ -142,7 +142,7 @@ class MLModeling:
         )
         interaction_popularity = dict(zip(pop["class_id"], pop["popularity"]))
 
-        # ── 3.  XGBoost model ───────
+        #### 3.  XGBoost model #########################################
         xgb_model    = None
         feature_cols = []
 
@@ -250,9 +250,9 @@ class MLModeling:
             "interaction_popularity": interaction_popularity,
         }
 
-    # ─────────────────────────────────────────────────────────────────────────
+    ###########################################################################
     # Demographic enrichment (unchanged from original, adapted for XGBoost)
-    # ─────────────────────────────────────────────────────────────────────────
+    ###########################################################################
     def _enrich_content_with_demographics(self, classes_df: pd.DataFrame,
                                           users_df: pd.DataFrame,
                                           interactions: pd.DataFrame
